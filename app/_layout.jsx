@@ -1,5 +1,5 @@
 // app/_layout.jsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -23,11 +23,9 @@ import {
   Nunito_700Bold,
 } from "@expo-google-fonts/nunito";
 import { connectSocket, disconnectSocket } from "../services/socket";
-import { registerForPushNotifications } from "../services/notifications";
 
 SplashScreen.preventAutoHideAsync();
 
-// Routes user to the correct tab group based on auth + userType
 function NavigationGuard() {
   const router = useRouter();
   const segments = useSegments();
@@ -50,7 +48,6 @@ function NavigationGuard() {
     }
 
     if (userType === "pandit") {
-      // Pandit not yet through onboarding → send to onboarding
       if (!user?.onboardingComplete && !inOnboarding) {
         router.replace("/onboarding/credentials");
         return;
@@ -61,7 +58,6 @@ function NavigationGuard() {
       return;
     }
 
-    // Regular user
     if (!inUser) router.replace("/user/home");
   }, [token, loading, userType, segments, user?.onboardingComplete]);
 
@@ -71,11 +67,8 @@ function NavigationGuard() {
 function SocketManager() {
   const token = useSelector(selectToken);
   useEffect(() => {
-    if (token) {
-      connectSocket();
-    } else {
-      disconnectSocket();
-    }
+    if (token) connectSocket();
+    else disconnectSocket();
     return () => {};
   }, [token]);
   return null;
@@ -84,9 +77,8 @@ function SocketManager() {
 function InnerApp() {
   const dispatch = useDispatch();
   const loading = useSelector(selectIsLoading);
-  const token = useSelector(selectToken);
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Cinzel_600SemiBold,
     Cinzel_700Bold,
     Nunito_400Regular,
@@ -94,28 +86,22 @@ function InnerApp() {
     Nunito_700Bold,
   });
 
+  // fonts are ready when loaded OR if they errored (don't block on font error)
+  const fontsReady = fontsLoaded || fontError != null;
+
   useEffect(() => {
     dispatch(initAuth());
   }, []);
 
   useEffect(() => {
-    if (!loading && token) {
-      registerForPushNotifications().then((token) => {
-        if (token) {
-          // Save to backend
-          import("../services/api").then(({ authAPI }) =>
-            authAPI.savePushToken(token).catch(() => {})
-          );
-        }
-      });
+    // Hide splash as soon as auth is resolved + fonts done (or failed)
+    if (!loading && fontsReady) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [loading, token]);
+  }, [loading, fontsReady]);
 
-  useEffect(() => {
-    if (!loading && fontsLoaded) SplashScreen.hideAsync();
-  }, [loading, fontsLoaded]);
-
-  if (loading || !fontsLoaded) return null;
+  // Don't render until both are ready
+  if (loading || !fontsReady) return null;
 
   return (
     <>
