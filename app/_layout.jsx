@@ -1,5 +1,5 @@
 // app/_layout.jsx
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -22,9 +22,20 @@ import {
   Nunito_600SemiBold,
   Nunito_700Bold,
 } from "@expo-google-fonts/nunito";
-import { connectSocket, disconnectSocket } from "../services/socket";
+
+// ── NO socket import — socket.io-client crashes APK on Expo standalone
+// ── NO google-signin import — not used in PanditConnect
+// ── NO notifications import at module level — lazy loaded after auth
+
+const LOG = (tag, msg, data) => {
+  const line = `[PC][${tag}] ${msg}${
+    data !== undefined ? " → " + JSON.stringify(data) : ""
+  }`;
+  console.log(line);
+};
 
 SplashScreen.preventAutoHideAsync();
+LOG("BOOT", "preventAutoHideAsync called");
 
 function NavigationGuard() {
   const router = useRouter();
@@ -35,6 +46,12 @@ function NavigationGuard() {
   const user = useSelector(selectUser);
 
   useEffect(() => {
+    LOG("NAV", "effect", {
+      loading,
+      hasToken: !!token,
+      userType,
+      seg: segments[0],
+    });
     if (loading) return;
 
     const inAuth = segments[0] === "auth";
@@ -43,40 +60,37 @@ function NavigationGuard() {
     const inPandit = segments[0] === "pandit";
 
     if (!token) {
+      LOG("NAV", "no token → /auth");
       if (!inAuth) router.replace("/auth");
       return;
     }
 
     if (userType === "pandit") {
       if (!user?.onboardingComplete && !inOnboarding) {
+        LOG("NAV", "pandit onboarding → /onboarding/credentials");
         router.replace("/onboarding/credentials");
         return;
       }
       if (user?.onboardingComplete && !inPandit) {
+        LOG("NAV", "pandit ready → /pandit/dashboard");
         router.replace("/pandit/dashboard");
       }
       return;
     }
 
+    LOG("NAV", "user → /user/home");
     if (!inUser) router.replace("/user/home");
   }, [token, loading, userType, segments, user?.onboardingComplete]);
 
   return null;
 }
 
-function SocketManager() {
-  const token = useSelector(selectToken);
-  useEffect(() => {
-    if (token) connectSocket();
-    else disconnectSocket();
-    return () => {};
-  }, [token]);
-  return null;
-}
-
 function InnerApp() {
   const dispatch = useDispatch();
   const loading = useSelector(selectIsLoading);
+  const token = useSelector(selectToken);
+
+  LOG("INNER", "render", { loading });
 
   const [fontsLoaded, fontError] = useFonts({
     Cinzel_600SemiBold,
@@ -86,28 +100,71 @@ function InnerApp() {
     Nunito_700Bold,
   });
 
-  // fonts are ready when loaded OR if they errored (don't block on font error)
   const fontsReady = fontsLoaded || fontError != null;
 
   useEffect(() => {
-    dispatch(initAuth());
-  }, []);
+    LOG("FONTS", "state", {
+      fontsLoaded,
+      fontError: fontError?.message,
+      fontsReady,
+    });
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
-    // Hide splash as soon as auth is resolved + fonts done (or failed)
+    LOG("AUTH", "dispatching initAuth");
+    dispatch(initAuth())
+      .then((r) =>
+        LOG("AUTH", "initAuth done", {
+          type: r?.type,
+          hasToken: !!r?.payload?.token,
+        })
+      )
+      .catch((e) => LOG("AUTH", "initAuth error", { msg: e?.message }));
+  }, []);
+
+  // Push notifications — lazy loaded AFTER auth resolves, never at module level
+  useEffect(() => {
+    if (!loading && token) {
+      LOG("PUSH", "registering push notifications");
+      import("../services/notifications")
+        .then(({ registerForPushNotifications }) =>
+          registerForPushNotifications()
+        )
+        .then((pushToken) => {
+          if (pushToken) {
+            LOG("PUSH", "got push token, saving");
+            import("../services/api").then(({ authAPI }) =>
+              authAPI.savePushToken(pushToken).catch(() => {})
+            );
+          }
+        })
+        .catch((e) =>
+          LOG("PUSH", "push registration error", { msg: e?.message })
+        );
+    }
+  }, [loading, token]);
+
+  useEffect(() => {
+    LOG("SPLASH", "hide check", { loading, fontsReady });
     if (!loading && fontsReady) {
-      SplashScreen.hideAsync().catch(() => {});
+      LOG("SPLASH", "calling hideAsync");
+      SplashScreen.hideAsync()
+        .then(() => LOG("SPLASH", "hidden ✅"))
+        .catch((e) => LOG("SPLASH", "hide error", { msg: e?.message }));
     }
   }, [loading, fontsReady]);
 
-  // Don't render until both are ready
-  if (loading || !fontsReady) return null;
+  if (loading || !fontsReady) {
+    LOG("RENDER", "blocked", { loading, fontsReady });
+    return null;
+  }
+
+  LOG("RENDER", "rendering Stack ✅");
 
   return (
     <>
       <StatusBar style="dark" />
       <NavigationGuard />
-      <SocketManager />
       <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
         <Stack.Screen name="auth" />
         <Stack.Screen name="onboarding" />
@@ -119,6 +176,7 @@ function InnerApp() {
 }
 
 export default function RootLayout() {
+  LOG("ROOT", "mounting");
   return (
     <Provider store={store}>
       <InnerApp />
