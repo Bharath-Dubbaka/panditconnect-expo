@@ -13,6 +13,7 @@ const initialState = {
 };
 
 // ── Init: restore session from AsyncStorage ───────────────
+// ── Init: restore session from AsyncStorage ───────────────
 export const initAuth = createAsyncThunk(
   "auth/init",
   async (_, { rejectWithValue }) => {
@@ -25,21 +26,7 @@ export const initAuth = createAsyncThunk(
       const storedUser = userStr ? JSON.parse(userStr) : null;
       if (!token || !storedUser)
         return { token: null, user: null, userType: null };
-
-      try {
-        const res = await authAPI.getMe();
-        const fresh = res.data.user || res.data.pandit;
-        const freshType = res.data.userType;
-        await AsyncStorage.setItem("user", JSON.stringify(fresh));
-        await AsyncStorage.setItem("userType", freshType);
-        return { token, user: fresh, userType: freshType };
-      } catch (apiErr) {
-        if (apiErr.response?.status === 401) {
-          await AsyncStorage.multiRemove(["token", "user", "userType"]);
-          return { token: null, user: null, userType: null };
-        }
-        return { token, user: storedUser, userType };
-      }
+      return { token, user: storedUser, userType };
     } catch (err) {
       return rejectWithValue(err.message);
     }
