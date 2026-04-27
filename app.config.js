@@ -1,4 +1,4 @@
-// app.config.js
+// app.config.js - STRIPPED - no datetimepicker, no location
 module.exports = {
   expo: {
     name: "PanditConnect",
@@ -21,12 +21,7 @@ module.exports = {
       package: "com.panditconnect.app",
       userInterfaceStyle: "light",
     },
-    plugins: [
-      ["expo-router", { root: "./app" }],
-      "expo-font",
-      "@react-native-community/datetimepicker",
-      "expo-location",
-    ],
+    plugins: [["expo-router", { root: "./app" }], "expo-font"],
     extra: {
       router: { root: "./app" },
       eas: { projectId: "1ed110b9-9a36-4598-99ad-bcade0b1057e" },
