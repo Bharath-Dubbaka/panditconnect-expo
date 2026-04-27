@@ -12,7 +12,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { logout, updateUser, selectUser } from "../../store/slices/authSlice";
 import { authAPI } from "../../services/api";
-
+// REMOVED: import { disconnectSocket } from "../../services/socket" — socket.io not used in PanditConnect
 import { COLORS, FONTS, RADIUS } from "../../constants/theme";
 import { rf, rs, rp } from "../../constants/responsive";
 import {
@@ -88,7 +88,7 @@ export default function UserProfileScreen() {
         style: "destructive",
         onPress: async () => {
           setLoggingOut(true);
-
+          // disconnectSocket() removed — socket not used in PanditConnect
           await dispatch(logout());
         },
       },
@@ -376,7 +376,6 @@ export default function UserProfileScreen() {
           </Card>
         )}
 
-        {/* Sign out */}
         <Card>
           <TouchableOpacity
             style={{

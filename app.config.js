@@ -1,4 +1,4 @@
-// app.config.js - STRIPPED - no datetimepicker, no location
+// app.config.js
 module.exports = {
   expo: {
     name: "PanditConnect",

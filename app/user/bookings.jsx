@@ -1,6 +1,12 @@
 // app/user/bookings.jsx
 import { useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { bookingAPI } from "../../services/api";
 import { COLORS, FONTS, RADIUS } from "../../constants/theme";
@@ -23,17 +29,27 @@ export default function UserBookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeStatus, setActiveStatus] = useState("");
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const params = activeStatus ? { status: activeStatus } : {};
-      const res = await bookingAPI.getMyBookings(params);
-      setBookings(res.data.bookings || []);
-    } catch {}
-    finally { setLoading(false); setRefreshing(false); }
-  }, [activeStatus]);
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const params = activeStatus ? { status: activeStatus } : {};
+        const res = await bookingAPI.getMyBookings(params);
+        setBookings(res.data.bookings || []);
+      } catch {
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [activeStatus]
+  );
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   if (loading) return <LoadingScreen label="Loading bookings..." />;
 
@@ -48,18 +64,35 @@ export default function UserBookingsScreen() {
           data={STATUS_TABS}
           keyExtractor={(t) => t.key}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: rp(16), paddingVertical: rp(10), gap: rs(8) }}
+          contentContainerStyle={{
+            paddingHorizontal: rp(16),
+            paddingVertical: rp(10),
+            gap: rs(8),
+          }}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={{
-                paddingHorizontal: rp(14), paddingVertical: rp(7),
-                borderRadius: RADIUS.full, borderWidth: 1.5,
-                borderColor: activeStatus === item.key ? COLORS.ochre : COLORS.border,
-                backgroundColor: activeStatus === item.key ? COLORS.ochrePale : "transparent",
+                paddingHorizontal: rp(14),
+                paddingVertical: rp(7),
+                borderRadius: RADIUS.full,
+                borderWidth: 1.5,
+                borderColor:
+                  activeStatus === item.key ? COLORS.ochre : COLORS.border,
+                backgroundColor:
+                  activeStatus === item.key ? COLORS.ochrePale : "transparent",
               }}
               onPress={() => setActiveStatus(item.key)}
             >
-              <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: rf(12), color: activeStatus === item.key ? COLORS.ochre : COLORS.textSecondary }}>
+              <Text
+                style={{
+                  fontFamily: FONTS.bodyMedium,
+                  fontSize: rf(12),
+                  color:
+                    activeStatus === item.key
+                      ? COLORS.ochre
+                      : COLORS.textSecondary,
+                }}
+              >
                 {item.label}
               </Text>
             </TouchableOpacity>
@@ -83,10 +116,21 @@ export default function UserBookingsScreen() {
           ...(bookings.length === 0 && { flex: 1, justifyContent: "center" }),
         }}
         ListEmptyComponent={
-          <EmptyState emoji="📅" title="No bookings yet" body="Book a pandit for your next pooja from the home screen" />
+          <EmptyState
+            emoji="📅"
+            title="No bookings yet"
+            body="Book a pandit for your next pooja from the home screen"
+          />
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={COLORS.ochre} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load(true);
+            }}
+            tintColor={COLORS.ochre}
+          />
         }
         showsVerticalScrollIndicator={false}
       />

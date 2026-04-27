@@ -11,7 +11,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { logout, updateUser, selectUser } from "../../store/slices/authSlice";
 import { authAPI, panditDashAPI } from "../../services/api";
-
+// REMOVED: import { disconnectSocket } from "../../services/socket" — socket.io not used in PanditConnect
 import {
   COLORS,
   FONTS,
@@ -63,7 +63,7 @@ export default function PanditProfileScreen() {
         style: "destructive",
         onPress: async () => {
           setLoggingOut(true);
-
+          // disconnectSocket() removed — socket not used in PanditConnect
           await dispatch(logout());
         },
       },
