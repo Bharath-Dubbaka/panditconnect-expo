@@ -21,7 +21,12 @@ module.exports = {
       package: "com.panditconnect.app",
       userInterfaceStyle: "light",
     },
-    plugins: [["expo-router", { root: "./app" }], "expo-font"],
+    plugins: [
+      ["expo-router", { root: "./app" }],
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-location",
+    ],
     extra: {
       router: { root: "./app" },
       eas: { projectId: "1ed110b9-9a36-4598-99ad-bcade0b1057e" },
